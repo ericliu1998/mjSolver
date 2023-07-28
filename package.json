@@ -1,0 +1,17 @@
+{
+  "name": "mahjongsolver",
+  "version": "1.0.0",
+  "description": "solve mahjong hand",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "author": "Eric Liu",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "hk-mahjong": "^3.2.0"
+  }
+}
