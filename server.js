@@ -225,7 +225,7 @@ function findTilesToWin(tiles, hasWong) {
 
       if (winningPerm.length > 0) {
         console.log("found a tile to win");
-        console.log(`${element2.getSuit()} - ${element2.getValue()}`);
+        console.log(`${element.getSuit()} - ${element.getValue()}`);
         winningTiles.push({
           suit: element.getSuit(),
           value: element.getValue(),
