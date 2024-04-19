@@ -1,6 +1,9 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 var cors = require("cors");
+var tools = require("./helpers.js");
+const rateLimit = require("express-rate-limit");
+require("dotenv").config();
 
 const app = express();
 // const urlencodedparser = bodyParser.urlencoded({extended: true})
@@ -8,6 +11,12 @@ const app = express();
 const textparser = bodyParser.text({ type: "*/*" });
 app.use(textparser);
 app.use(cors());
+// app.set("trust proxy", true);
+// const limiter = rateLimit({
+//   windowMs: 3000,
+//   max: 1,
+// });
+// app.use(limiter);
 
 const {
   Tile,
@@ -16,6 +25,7 @@ const {
   ExplorerOfWinningPermutations,
   WinningHand,
 } = require("hk-mahjong");
+const { status } = require("express/lib/response.js");
 
 var honor9 = { suit: "honor", value: 9 };
 
@@ -55,11 +65,27 @@ var allTiles = [
   new Tile({ suit: "honor", value: 6 }),
   new Tile({ suit: "honor", value: 7 }),
 ];
+
+var checkApiKey = function (req, res, next) {
+  var publicKey = req.get("publicKey");
+  if (publicKey !== process.env.API_KEY) {
+    // console.log(publicKey);
+    return res.status(401).json({ status: "error" });
+  }
+  next();
+};
+
 app.get("/", function (request, response) {
-  response.send("Hello");
+  response.send("Success");
 });
 
-app.post("/isWinningHand", function (req, res) {
+app.all("/api/*", checkApiKey);
+
+app.get("/health", function (req, res) {
+  res.send({ status: "Up" });
+});
+
+app.post("/api/isWinningHand", function (req, res) {
   var hasWongTile = false;
   console.log("is winning hand called");
   var jsonParsedBody = JSON.parse(req.body);
@@ -78,9 +104,13 @@ app.post("/isWinningHand", function (req, res) {
   });
   if (hasWongTile) {
     if (jsonParsedBody.length == 14) {
-      res.send(iswinningHandWithWong(tiles));
+      res
+        .status(200)
+        .json({ status: "success", contents: iswinningHandWithWong(tiles) });
     } else {
-      res.send(findTilesToWin(tiles, true));
+      res
+        .status(200)
+        .json({ status: "success", contents: findTilesToWin(tiles, true) });
     }
 
     //fdsfsdfsdfsd
@@ -96,12 +126,14 @@ app.post("/isWinningHand", function (req, res) {
       console.log(winningPerm.length);
 
       if (winningPerm.length == 0) {
-        res.send(false);
+        res.status(200).json({ status: "success", contents: false });
       } else {
-        res.send(true);
+        res.status(200).json({ status: "success", contents: true });
       }
     } else {
-      res.send(findTilesToWin(tiles, false));
+      res
+        .status(200)
+        .json({ status: "success", contents: findTilesToWin(tiles, false) });
     }
   }
 });
@@ -186,13 +218,28 @@ function findTilesToWin(tiles, hasWong) {
   if (hasWong) {
     var winningTiles = [];
     var winningTiles2 = [];
+    var allCount = 0;
+    var uniqueCount = 0;
+    var combinations = [];
     allTiles.forEach((element1) => {
       var tilesToCheck = [...tiles];
       tilesToCheck.push(element1);
 
       allTiles.forEach((element2) => {
         var tilesToCheck2 = [...tilesToCheck];
+        var stringifyComb = JSON.stringify(combinations);
+        if (
+          stringifyComb.indexOf(JSON.stringify([element1, element2])) == -1 &&
+          stringifyComb.indexOf(JSON.stringify([element2, element1])) == -1
+        ) {
+          combinations.push([element1, element2]);
+        }
+        allCount += 1;
         if (!winningTiles2.includes(element2)) {
+          uniqueCount += 1;
+          console.log(
+            `${uniqueCount}: ${element1.getSuit()} - ${element1.getValue()};${element2.getSuit()} - ${element2.getValue()}`
+          );
           tilesToCheck2.push(element2);
 
           var winningPerm = checkIfHandIsWinning(tilesToCheck2);
@@ -201,9 +248,9 @@ function findTilesToWin(tiles, hasWong) {
           // });
 
           if (winningPerm.length > 0) {
-            console.log(
-              `found a tile to win: ${element2.getSuit()} - ${element2.getValue()}`
-            );
+            // console.log(
+            //   `found a tile to win: ${element2.getSuit()} - ${element2.getValue()}`
+            // );
             winningTiles.push({
               suit: element2.getSuit(),
               value: element2.getValue(),
@@ -213,6 +260,13 @@ function findTilesToWin(tiles, hasWong) {
         }
       });
     });
+    console.log(allCount);
+    console.log(uniqueCount);
+    console.log(combinations.length);
+    console.log(combinations);
+    console.log(
+      `${combinations[0].toString()} - ${combinations[0].toString()}`
+    );
   } else {
     var tilesToCheck = [];
 
